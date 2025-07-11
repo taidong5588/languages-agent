@@ -1,0 +1,35 @@
+# .envファイルは認証情報を含むため、Git管理から除外
+.env
+
+# Docker関連
+.docker/
+docker-compose.override.yml
+
+# ログファイル
+errors/
+*.log
+
+# データベースファイル
+*.sql
+*.sqlite
+
+# PHPの依存パッケージ (Composer)
+# アプリケーションディレクトリ内のvendorを無視
+/my-app/vendor/
+/my-app/composer.lock
+
+# Node.jsの依存パッケージ (npm, yarn)
+/my-app/node_modules/
+/my-app/npm-debug.log
+/my-app/yarn-error.log
+/my-app/package-lock.json
+/my-app/yarn.lock
+
+# IDEやエディタの設定ファイル
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS固有のファイル
+.DS_Store

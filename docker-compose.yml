@@ -1,0 +1,140 @@
+# Docker Compose ファイルのバージョンを指定
+version: '3.8'
+
+# 複数のコンテナサービスを定義する
+services:
+
+  # ============================
+  # Nginx（Web サーバー）
+  # ============================
+  nginx:
+    # Nginx コンテナのビルド定義（Dockerfile の場所を指定）
+    build:
+      context: ./docker-config/nginx         # Dockerfile があるディレクトリ
+      dockerfile: Dockerfile                 # 使用する Dockerfile
+
+    # コンテナ名を .env の COMPOSE_PROJECT_NAME を使って定義
+    container_name: ${COMPOSE_PROJECT_NAME}-nginx
+
+    # ホストとコンテナ間のポートマッピング
+    ports:
+      - "${NGINX_PORT}:80"                   # 例: 8080:80 → localhost:8080 でアクセス
+
+    # ホストとコンテナ間で共有するディレクトリやファイルを定義
+    volumes:
+      - ./my-app:/var/www                    # アプリケーションのソースコード
+      - ./docker-config/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker-config/errors:/var/log/nginx/errors  # ログ出力ディレクトリ
+
+    # PHP-FPM が起動してから Nginx を起動するように設定
+    depends_on:
+      - php
+
+    # サービス間通信用のネットワークを指定
+    networks:
+      - app-network
+
+  # ============================
+  # PHP-FPM（PHP アプリケーション実行）
+  # ============================
+  php:
+    build:
+      context: ./docker-config/php
+      dockerfile: Dockerfile
+
+    container_name: ${COMPOSE_PROJECT_NAME}-php
+
+    volumes:
+      - ./my-app:/var/www                    # アプリケーションコード
+      - ./docker-config/php/php.ini:/usr/local/etc/php/php.ini  # PHP 設定
+      - ./docker-config/errors:/var/log/php-fpm/errors          # PHP エラーログ
+
+    # 環境変数をコンテナに渡す（Laravel などの .env に連携する）
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${MARIADB_DATABASE}
+      DB_USERNAME: ${MARIADB_USER}
+      DB_PASSWORD: ${MARIADB_PASSWORD}
+      TZ: ${TZ}                              # タイムゾーン
+
+    depends_on:
+      - db
+
+    networks:
+      - app-network
+
+  # ============================
+  # MariaDB（データベース）
+  # ============================
+  db:
+    build:
+      context: ./docker-config/db/conf
+      dockerfile: Dockerfile
+
+      args:
+        MARIADB_VERSION: ${MARIADB_VERSION}  # MariaDB のバージョン指定
+        
+    # image: mariadb:${MARIADB_VERSION}
+    container_name: ${COMPOSE_PROJECT_NAME}-db
+
+    restart: always                          # コンテナが落ちたら自動再起動
+    tty: true                                # 対話モード有効化（ログ閲覧など）
+
+    # MariaDB の環境変数（初期DB設定）
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MARIADB_DATABASE}
+      MYSQL_USER: ${MARIADB_USER}
+      MYSQL_PASSWORD: ${MARIADB_PASSWORD}
+
+    volumes:
+      - db-data:/var/lib/mysql              # データ永続化用のボリューム
+      - ./docker-config/db/conf/my.conf:/etc/mysql/conf.d/my.conf  # MariaDB 設定
+      - ./docker-config/db/init:/docker-entrypoint-initdb.d   # ✅ テーブル作成・初期データ投入用SQL
+
+
+    ports:
+      - "3306:3306"                         # 任意でホストから直接接続できるようにする
+
+    networks:
+      - app-network
+
+  # ============================
+  # phpMyAdmin（DB管理ツール・開発用）
+  # ============================
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest     # 公式イメージを使用
+    platform: linux/amd64
+
+    container_name: ${COMPOSE_PROJECT_NAME}-phpmyadmin
+
+    restart: always
+
+    # phpMyAdmin の接続先 DB サーバーを指定
+    environment:
+      PMA_HOST: db                           # MariaDB サービス名
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+
+    ports:
+      - "${PHPMYADMIN_PORT}:80"             # 例: 8081:80 → localhost:8081 でアクセス
+
+    depends_on:
+      - db
+
+    networks:
+      - app-network
+
+# ============================
+# 永続化ボリュームの定義
+# ============================
+volumes:
+  db-data:
+    driver: local
+
+# ============================
+# サービス間ネットワークの定義
+# ============================
+networks:
+  app-network:
+    driver: bridge
