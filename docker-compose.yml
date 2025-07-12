@@ -1,62 +1,52 @@
-# Docker Compose ファイルのバージョンを指定
 version: '3.8'
 
-# 複数のコンテナサービスを定義する
 services:
-
-  # ============================
+  # ===============================
   # Nginx（Web サーバー）
-  # ============================
+  # ===============================
   nginx:
-    # Nginx コンテナのビルド定義（Dockerfile の場所を指定）
     build:
-      context: ./docker-config/nginx         # Dockerfile があるディレクトリ
-      dockerfile: Dockerfile                 # 使用する Dockerfile
+      context: ./docker-config/nginx            # Nginx用 Dockerfile のある場所
+      dockerfile: Dockerfile                    # 使用する Dockerfile
 
-    # コンテナ名を .env の COMPOSE_PROJECT_NAME を使って定義
     container_name: ${COMPOSE_PROJECT_NAME}-nginx
 
-    # ホストとコンテナ間のポートマッピング
     ports:
-      - "${NGINX_PORT}:80"                   # 例: 8080:80 → localhost:8080 でアクセス
+      - "${NGINX_PORT:-8080}:80"                # ホストの8080 → コンテナの80番ポート
 
-    # ホストとコンテナ間で共有するディレクトリやファイルを定義
     volumes:
-      - ./my-app:/var/www                    # アプリケーションのソースコード
+      - ./my-app:/var/www                       # Laravelアプリ全体（agent, language 等を含む）
       - ./docker-config/nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - ./docker-config/errors:/var/log/nginx/errors  # ログ出力ディレクトリ
+      - ./docker-config/errors:/var/log/nginx/errors
 
-    # PHP-FPM が起動してから Nginx を起動するように設定
     depends_on:
-      - php
+      - php                                     # PHPコンテナが起動してからNginxを起動
 
-    # サービス間通信用のネットワークを指定
     networks:
       - app-network
 
-  # ============================
-  # PHP-FPM（PHP アプリケーション実行）
-  # ============================
+  # ===============================
+  # PHP-FPM（Laravel実行エンジン）
+  # ===============================
   php:
     build:
-      context: ./docker-config/php
+      context: ./docker-config/php              # PHP用 Dockerfile のある場所
       dockerfile: Dockerfile
 
     container_name: ${COMPOSE_PROJECT_NAME}-php
 
     volumes:
-      - ./my-app:/var/www                    # アプリケーションコード
-      - ./docker-config/php/php.ini:/usr/local/etc/php/php.ini  # PHP 設定
-      - ./docker-config/errors:/var/log/php-fpm/errors          # PHP エラーログ
+      - ./my-app:/var/www                       # Laravelアプリ全体をマウント
+      - ./docker-config/php/php.ini:/usr/local/etc/php/php.ini
+      - ./docker-config/errors:/var/log/php-fpm/errors
 
-    # 環境変数をコンテナに渡す（Laravel などの .env に連携する）
     environment:
-      DB_HOST: db
+      DB_HOST: db                               # DB接続ホスト（サービス名）
       DB_PORT: 3306
-      DB_DATABASE: ${MARIADB_DATABASE}
-      DB_USERNAME: ${MARIADB_USER}
-      DB_PASSWORD: ${MARIADB_PASSWORD}
-      TZ: ${TZ}                              # タイムゾーン
+      DB_DATABASE: ${MARIADB_DATABASE}          # 使用するDB名
+      DB_USERNAME: ${MARIADB_USER}              # DBユーザー
+      DB_PASSWORD: ${MARIADB_PASSWORD}          # DBパスワード
+      TZ: ${TZ:-Asia/Tokyo}                     # タイムゾーン（デフォルトAsia/Tokyo）
 
     depends_on:
       - db
@@ -64,24 +54,23 @@ services:
     networks:
       - app-network
 
-  # ============================
-  # MariaDB（データベース）
-  # ============================
+  # ===============================
+  # MariaDB（MySQL互換のデータベース）
+  # ===============================
   db:
     build:
-      context: ./docker-config/db/conf
+      context: ./docker-config/db/conf          # MariaDB用 Dockerfile のある場所
       dockerfile: Dockerfile
 
       args:
-        MARIADB_VERSION: ${MARIADB_VERSION}  # MariaDB のバージョン指定
-        
-    # image: mariadb:${MARIADB_VERSION}
+        MARIADB_VERSION: ${MARIADB_VERSION}     # MariaDB バージョン指定用ビルド引数
+
+    # image: mariadb:${MARIADB_VERSION}         # 代替として直接指定も可能
     container_name: ${COMPOSE_PROJECT_NAME}-db
 
-    restart: always                          # コンテナが落ちたら自動再起動
-    tty: true                                # 対話モード有効化（ログ閲覧など）
+    restart: always                             # コンテナが落ちたら自動で再起動
+    tty: true                                   # ターミナルログ有効（デバッグ用）
 
-    # MariaDB の環境変数（初期DB設定）
     environment:
       MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MARIADB_DATABASE}
@@ -89,52 +78,48 @@ services:
       MYSQL_PASSWORD: ${MARIADB_PASSWORD}
 
     volumes:
-      - db-data:/var/lib/mysql              # データ永続化用のボリューム
-      - ./docker-config/db/conf/my.conf:/etc/mysql/conf.d/my.conf  # MariaDB 設定
-      - ./docker-config/db/init:/docker-entrypoint-initdb.d   # ✅ テーブル作成・初期データ投入用SQL
-
+      - db-data:/var/lib/mysql                  # DBデータ永続化
+      - ./docker-config/db/conf/my.conf:/etc/mysql/conf.d/my.conf  # MariaDB設定
+      - ./docker-config/db/init:/docker-entrypoint-initdb.d        # 初期SQL実行用
 
     ports:
-      - "3306:3306"                         # 任意でホストから直接接続できるようにする
+      - "3306:3306"                              # ホストからDB接続可（任意）
 
     networks:
       - app-network
 
-  # ============================
-  # phpMyAdmin（DB管理ツール・開発用）
-  # ============================
+  # ===============================
+  # phpMyAdmin（DB管理ツール）
+  # ===============================
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest     # 公式イメージを使用
-    platform: linux/amd64
-
+    image: phpmyadmin/phpmyadmin:latest         # 公式phpMyAdminイメージ
+    platform: linux/amd64                       # Apple Silicon対策（ARM→x86）
     container_name: ${COMPOSE_PROJECT_NAME}-phpmyadmin
-
     restart: always
 
-    # phpMyAdmin の接続先 DB サーバーを指定
     environment:
-      PMA_HOST: db                           # MariaDB サービス名
+      PMA_HOST: db                               # 接続対象DBホスト名（サービス名）
       MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
 
     ports:
-      - "${PHPMYADMIN_PORT}:80"             # 例: 8081:80 → localhost:8081 でアクセス
+      - "${PHPMYADMIN_PORT:-8081}:80"            # ホスト8081 → phpMyAdmin 80番
 
     depends_on:
       - db
-
+      
     networks:
       - app-network
 
-# ============================
-# 永続化ボリュームの定義
-# ============================
+# ===============================
+# データ永続化用ボリューム
+# ===============================
 volumes:
   db-data:
     driver: local
 
-# ============================
-# サービス間ネットワークの定義
-# ============================
+# ===============================
+# サービス間通信用ネットワーク
+# ===============================
 networks:
   app-network:
     driver: bridge
