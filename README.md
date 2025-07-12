@@ -72,6 +72,13 @@ Webサーバー: http://localhost:8080
 phpMyAdmin: http://localhost:8081
 → ユーザー名とパスワードは .env に記述した内容を使用します。
 
+| アクセス先 URL                    | 表示されるファイル                          |
+| ---------------------------- | ---------------------------------- |
+| `http://localhost/`          | `my-app/public/index.php`（共通画面）    |
+| `http://localhost/agent/`    | `my-app/agent/public/index.php`    |
+| `http://localhost/language/` | `my-app/language/public/index.php` |
+
+
 4. コンテナの停止と削除
 Bash
 docker compose down
@@ -139,3 +146,11 @@ phpMyAdmin によるデータベース管理
 phpMyAdmin は本番では 使用しないでください。
 
 .env ファイルは Git管理しないように注意 してください。
+
+🔁 再起動してみる
+
+以下を順番に実行し、再ビルド & 起動しましょう：
+
+docker compose down --volumes
+docker compose build --no-cache
+docker compose up -d
