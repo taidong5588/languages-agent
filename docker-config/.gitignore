@@ -19,11 +19,11 @@ errors/
 /my-app/composer.lock
 
 # Node.jsの依存パッケージ (npm, yarn)
-/my-app/node_modules/
-/my-app/npm-debug.log
-/my-app/yarn-error.log
-/my-app/package-lock.json
-/my-app/yarn.lock
+# /my-app/node_modules/
+# /my-app/npm-debug.log
+# /my-app/yarn-error.log
+# /my-app/package-lock.json
+# /my-app/yarn.lock
 
 # IDEやエディタの設定ファイル
 .idea/

@@ -72,13 +72,6 @@ Webサーバー: http://localhost:8080
 phpMyAdmin: http://localhost:8081
 → ユーザー名とパスワードは .env に記述した内容を使用します。
 
-| アクセス先 URL                    | 表示されるファイル                          |
-| ---------------------------- | ---------------------------------- |
-| `http://localhost/`          | `my-app/public/index.php`（共通画面）    |
-| `http://localhost/agent/`    | `my-app/agent/public/index.php`    |
-| `http://localhost/language/` | `my-app/language/public/index.php` |
-
-
 4. コンテナの停止と削除
 Bash
 docker compose down
@@ -147,10 +140,21 @@ phpMyAdmin は本番では 使用しないでください。
 
 .env ファイルは Git管理しないように注意 してください。
 
-🔁 再起動してみる
+🔍 サービス名が不明なときの確認方法
 
-以下を順番に実行し、再ビルド & 起動しましょう：
+以下を実行すると、サービス一覧が表示されます：
 
-docker compose down --volumes
-docker compose build --no-cache
-docker compose up -d
+docker compose ps
+出力例：
+
+NAME                COMMAND                  SERVICE             STATUS
+my-php-app          "docker-php-entrypoi…"   app                 running
+my-db               "docker-entrypoint.s…"   db                  running
+この場合、app がサービス名なので docker compose exec app php -v を使います。
+
+🧼 よくある組み合わせ例（完全クリーン再構築）
+
+docker-compose down --volumes --remove-orphans
+system prune -a --volumes -f
+docker builder prune -a -f
+docker-compose up --build -d
