@@ -77,6 +77,7 @@
 
         <h2>データベース接続確認</h2>
         <?php
+        // 環境変数からデータベース接続情報を取得
         $db_host = getenv('DB_HOST');
         $db_name = getenv('DB_DATABASE');
         $db_user = getenv('DB_USERNAME');
@@ -84,22 +85,26 @@
 
         try {
             // mysqliでデータベースに接続
-            // オブジェクト指向スタイルでのエラーハンドリング
+            // エラーレポートを厳格に設定し、例外をスローするようにする
             mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
             $conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
 
+            // 接続成功メッセージとMariaDBバージョンを表示
             echo '<div class="status success">✅ データベースへの接続に成功しました！<br>MariaDB Version: ' . $conn->server_info . '</div>';
+            // データベース接続を閉じる
             $conn->close();
 
         } catch (mysqli_sql_exception $e) {
+            // 接続失敗メッセージとエラー詳細を表示
             echo '<div class="status error">❌ データベースへの接続に失敗しました。</div>';
-            echo '<p><code>docker-config/.env</code> の設定内容が正しいか、またDBコンテナが正常に起動しているか確認してください。</p>';
+            echo '<p><code>.env</code> ファイルの設定内容が正しいか、またDBコンテナが正常に起動しているか確認してください。</p>';
             echo '<pre><code>' . htmlspecialchars($e->getMessage()) . '</code></pre>';
         }
         ?>
 
         <h2>PHP環境情報</h2>
         <?php
+        // PHPバージョンを表示
         echo "<p>PHP Version: <code>" . phpversion() . "</code></p>";
         ?>
     </div>

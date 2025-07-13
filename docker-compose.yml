@@ -1,140 +1,132 @@
-# ===============================
-# Laravel + Nginx + PHP-FPM + MariaDB + phpMyAdmin 開発環境構築用
-# ===============================
+# =====================================================
+# Laravel 開発環境の Docker Compose 定義
+# Nginx + PHP-FPM + MariaDB + phpMyAdmin の4コンテナ構成
+# =====================================================
 
-# Docker Compose バージョン指定（省略可能）
+# Docker Compose のバージョン指定 (v1.27以降は省略可能ですが、明示的に記述することを推奨)
 # version: '3.8'
 
 services:
   # ------------------------------------------------
-  # Nginx：Webサーバー（Laravelのリクエスト受け口）
+  # Nginx: Webサーバー (Laravelのリクエスト受け口)
   # ------------------------------------------------
   nginx:
     build:
       context: ./docker-config/nginx           # Nginx用Dockerfileの場所
       dockerfile: Dockerfile                   # 使用するDockerfile名
-    container_name: ${COMPOSE_PROJECT_NAME}-nginx
+    container_name: ${COMPOSE_PROJECT_NAME}-nginx # コンテナ名の命名規則
 
     ports:
-      - "${NGINX_PORT:-8080}:80"               # ホスト→コンテナ: ポートマッピング（例: 8080でアクセス）
+      - "${NGINX_PORT:-8080}:80"               # ホストの${NGINX_PORT}番をNginxの80番にマッピング (デフォルト: 8080)
 
     volumes:
-      - ./my-app:/var/www                      # Laravelアプリ全体をマウント
-      - ./docker-config/nginx/default.conf:/etc/nginx/conf.d/default.conf  # Nginx設定
-      - ./docker-config/errors:/var/log/nginx/errors                       # エラーログ出力先
+      - ./my-app:/var/www                      # Laravelアプリケーションのコードを共有マウント
+      - ./docker-config/nginx/default.conf:/etc/nginx/conf.d/default.conf  # Nginx設定ファイルをマウント
+      - ./docker-config/errors:/var/log/nginx/errors                       # Nginxエラーログ保存場所をマウント
 
     depends_on:
-      - php                                    # PHP起動後にNginxを起動
+      - php                                    # php-fpmが起動してからNginxを起動
 
     networks:
-      - app-network
+      - app-network                            # サービス間通信のためのネットワーク指定
 
   # ------------------------------------------------
-  # PHP-FPM：Laravelアプリケーションの実行エンジン
+  # PHP-FPM: Laravelアプリケーションの実行エンジン
   # ------------------------------------------------
   php:
     build:
-      context: ./docker-config/php
-      dockerfile: Dockerfile
-    container_name: ${COMPOSE_PROJECT_NAME}-php
+      context: ./docker-config/php             # PHP用Dockerfileの場所
+      dockerfile: Dockerfile                   # 使用するDockerfile名
+    container_name: ${COMPOSE_PROJECT_NAME}-php # コンテナ名の命名規則
 
     volumes:
-      - ./my-app:/var/www
-      - ./docker-config/php/php.ini:/usr/local/etc/php/php.ini
-      - ./docker-config/errors:/var/log/php-fpm/errors
+      - ./my-app:/var/www                      # Laravelアプリケーションのコードを共有マウント
+      - ./docker-config/php/php.ini:/usr/local/etc/php/php.ini            # php.ini 設定ファイルをマウント
+      - ./docker-config/errors:/var/log/php-fpm/errors                    # PHPエラーログ保存場所をマウント
 
     environment:
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_DATABASE: ${MARIADB_DATABASE}
-      DB_USERNAME: ${MARIADB_USER}
-      DB_PASSWORD: ${MARIADB_PASSWORD}
-      TZ: ${TZ:-Asia/Tokyo}                    # タイムゾーン設定（デフォルト Asia/Tokyo）
+      DB_HOST: db                              # MariaDBのサービス名 (Docker Compose内部のホスト名)
+      DB_PORT: 3306                            # MariaDBのポート
+      DB_DATABASE: ${MARIADB_DATABASE}         # Laravel .envのDB_DATABASEに対応
+      DB_USERNAME: ${MARIADB_USER}             # Laravel .envのDB_USERNAMEに対応
+      DB_PASSWORD: ${MARIADB_PASSWORD}         # Laravel .envのDB_PASSWORDに対応
+      TZ: ${TZ:-Asia/Tokyo}                    # タイムゾーン設定 (デフォルト: Asia/Tokyo)
 
     depends_on:
-      - db
+      db:
+        condition: service_healthy             # dbサービスがhealthyになるまで待つ
 
     networks:
-      - app-network
+      - app-network                            # サービス間通信のためのネットワーク指定
 
   # ------------------------------------------------
-  # MariaDB：MySQL互換のリレーショナルDB
+  # MariaDB: MySQL互換のリレーショナルデータベース
   # ------------------------------------------------
   db:
-    # Dockerfile を使用して MariaDB をビルドしたい場合はこちらを使用（今回は使用せず image に切替）
-    # build:
-    #   context: ./docker-config/db/conf
-    #   dockerfile: Dockerfile
-    #   args:
-    #     MARIADB_VERSION: ${MARIADB_VERSION}  # .env ファイルから MariaDB バージョンを受け取る
+    # Dockerfile を使用せず、公式の MariaDB イメージを直接使用
+    image: mariadb:${MARIADB_VERSION:-10.11}   # MariaDBのバージョン指定 (デフォルト: 10.11)
+    container_name: ${COMPOSE_PROJECT_NAME}-db # コンテナ名の命名規則
 
-    image: mariadb:${MARIADB_VERSION:-10.11}         # 公式の MariaDB イメージ（.env の値でバージョン指定）
-    container_name: ${COMPOSE_PROJECT_NAME}-db  # プロジェクト名を元にコンテナ名を設定
-
-    restart: always                            # コンテナが落ちたら自動再起動
-    tty: true                                  # 対話型コンソールログを有効化
+    restart: always                            # コンテナが停止した場合、自動的に再起動
+    tty: true                                  # ログのリアルタイム監視用
 
     environment:
-      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}  # root パスワード（必須）
-      MYSQL_DATABASE: ${MARIADB_DATABASE}            # 作成される DB 名
-      MYSQL_USER: ${MARIADB_USER}                    # DB ユーザー名
-      MYSQL_PASSWORD: ${MARIADB_PASSWORD}            # DB ユーザーパスワード
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}  # rootユーザーのパスワード (必須)
+      MYSQL_DATABASE: ${MARIADB_DATABASE}            # 初期作成されるデータベース名
+      MYSQL_USER: ${MARIADB_USER}                    # アプリケーション用ユーザー名
+      MYSQL_PASSWORD: ${MARIADB_PASSWORD}            # アプリケーション用ユーザーパスワード
 
     volumes:
-      - ./docker-config/db/data:/var/lib/mysql                # MariaDB データ保存領域（永続化）
-      # - db-data:/var/lib/mysql              # データ永続化用のボリューム
-      - ./docker-config/db/conf/my.conf:/etc/mysql/conf.d/my.conf  # MariaDB 設定ファイル
-      - ./docker-config/db/sql:/docker-entrypoint-initdb.d    # 初回起動時に実行する SQL
+      - db-data:/var/lib/mysql                            # DBデータ永続化用の名前付きボリューム
+      - ./docker-config/db/conf/my.conf:/etc/mysql/conf.d/my.conf  # MariaDB設定ファイルをマウント
+      - ./docker-config/db/sql:/docker-entrypoint-initdb.d       # 初回起動時に自動実行されるSQLスクリプトの場所
 
     ports:
-      # 直接ホストの 3306 をバインドすると競合する可能性があるので注意（他の DB が動いている場合）
-      - "${DB_PORT}:3306" # - "3307:3306"
-      # - "${DB_PORT:-3307}:3306"  # .env に DB_PORT を定義し、競合しないよう変更（例：3307）
+      - "${DB_PORT:-3306}:3306"                # ホストの${DB_PORT}番をMariaDBの3306番にマッピング (デフォルト: 3306)
 
     networks:
-      - app-network  # 他サービスとつながるネットワーク（phpやnginxなどと通信可能）
+      - app-network                            # サービス間通信のためのネットワーク指定
 
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s # コンテナ起動後、ヘルスチェックを開始するまでの期間
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MARIADB_ROOT_PASSWORD}"]
+      interval: 10s                            # ヘルスチェックの間隔
+      timeout: 5s                              # ヘルスチェックのタイムアウト時間
+      retries: 5                               # ヘルスチェックが失敗とみなされるまでのリトライ回数
+      start_period: 30s                        # コンテナ起動後、ヘルスチェックを開始するまでの猶予期間
 
   # ------------------------------------------------
-  # phpMyAdmin：MariaDBのGUI管理ツール
+  # phpMyAdmin: MariaDBのGUI管理ツール
   # ------------------------------------------------
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
-    platform: linux/amd64                      # Apple Silicon対応
-    container_name: ${COMPOSE_PROJECT_NAME}-phpmyadmin
+    image: phpmyadmin/phpmyadmin:latest        # phpMyAdmin公式イメージ
+    platform: linux/amd64                      # Apple Silicon (M1/M2) 環境での互換性確保
+    container_name: ${COMPOSE_PROJECT_NAME}-phpmyadmin # コンテナ名の命名規則
 
-    restart: always
+    restart: always                            # コンテナが停止した場合、自動的に再起動
 
     environment:
-      PMA_HOST: db                              # 接続先DBサービス名
-      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      PMA_HOST: db                             # 接続先DBホスト名 (MariaDBのサービス名)
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD} # rootパスワード
 
     ports:
-      - "${PHPMYADMIN_PORT:-8081}:80"           # ホスト→phpMyAdminへのアクセス
+      - "${PHPMYADMIN_PORT:-8081}:80"          # ホストの${PHPMYADMIN_PORT}番をphpMyAdminの80番にマッピング (デフォルト: 8081)
 
     depends_on:
-      - db
+      - db                                     # dbサービスが起動してからphpMyAdminを起動
 
     networks:
-      - app-network
+      - app-network                            # サービス間通信のためのネットワーク指定
 
 # ------------------------------------------------
-# 永続化ボリューム：MariaDBデータ保持用
+# 永続化ボリューム定義: MariaDBデータ保持用
 # ------------------------------------------------
 volumes:
   db-data:
-    driver: local
+    driver: local                              # ローカルディスクにデータを保存するドライバー
 
 # ------------------------------------------------
-# サービス間の仮想ネットワーク
+# サービス間の仮想ネットワーク定義
 # ------------------------------------------------
 networks:
   app-network:
-    driver: bridge
-    
+    driver: bridge                             # ブリッジネットワークタイプ

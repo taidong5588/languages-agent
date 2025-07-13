@@ -1,7 +1,7 @@
 # 公式のNginx安定版イメージをベースとして使用
 FROM nginx:latest
 
-# タイムゾーン設定（オプション）
+# タイムゾーン設定 (オプション: コンテナ内でTZ環境変数を設定)
 ENV TZ=Asia/Tokyo
 
 # コンテナ起動時の作業ディレクトリ
@@ -16,4 +16,4 @@ WORKDIR /etc/nginx
 # COPY ./my-static-assets /usr/share/nginx/html/static
 #
 # 現状の構成では、設定ファイルはdocker-compose.yml経由でマウントされるため、
-# このDockerfile内での特別な設定は不要です。
+# このDockerfile内での特別な設定は必須ではありません。
