@@ -18,25 +18,30 @@
 ## 📂 ディレクトリ構成
 
 project-root/
-├── .env                       # 環境変数定義ファイル
-├── docker-compose.yml        # Docker Compose によるサービス定義
-├── docker-config/            # 各サービスの構成フォルダ
-│   ├── db/                   # MariaDB 設定関連
-│   │   ├── Dockerfile        # MariaDB カスタムビルド（必要な場合）
-│   │   └── my.conf           # MariaDB 設定ファイル
-│   ├── nginx/                # Nginx 設定関連
-│   │   ├── Dockerfile        # Nginx カスタムビルド
-│   │   └── default.conf      # 仮想ホスト、リバースプロキシ設定
-│   ├── php/                  # PHP-FPM 設定関連
-│   │   ├── Dockerfile        # PHP カスタムイメージ
-│   │   └── php.ini           # PHP 設定ファイル
-│   ├── errors/               # エラーログ出力用フォルダ
-│   │   └── php_errors.log    # PHP エラーログファイル（空でOK）
-│   └── .gitignore            # Gitに含めないファイルの指定
-├── my-app/                   # PHP アプリケーション本体（Laravel等）
-│   └── public/
-│       └── index.php       　 # テスト用PHPファイル（初期）
-└── README.md                 # プロジェクト説明書
+.
+├── docker-compose.yml                # Docker Compose 本体。全サービス定義（Nginx, PHP, DB, phpMyAdmin など）
+├── docker-config                     # 各種サービスの個別設定フォルダ
+│   ├── db                            # MariaDB 関連の設定
+│   │   ├── conf
+│   │   │   └── my.conf              # MariaDB のカスタム設定ファイル（文字コード・ログ・タイムゾーンなど）
+│   │   └── sql
+│   │       └── agent.sql            # MariaDB 初期データ投入用SQLスクリプト（DB初回起動時に実行される）
+│   ├── errors                        # 各サービスのログ出力先
+│   │   ├── error.log                # Nginxなど共通のエラーログファイル
+│   │   └── php_errors.log          # PHP用のエラーログファイル（php-fpm経由のログが出力される）
+│   ├── nginx                         # Nginx（Webサーバ）の設定
+│   │   ├── default.conf            # Nginx のバーチャルホスト設定（Laravel へのルーティング等）
+│   │   └── Dockerfile              # Nginx コンテナのビルド用（必要に応じてカスタマイズ）
+│   └── php                           # PHP（Laravel 実行エンジン）設定
+│       ├── Dockerfile              # PHP-FPM の Dockerfile（composer含む Laravel対応環境を構築）
+│       └── php.ini                 # PHP 設定ファイル（タイムゾーンや拡張設定など）
+├── my-app                            # Laravel アプリ本体のコード格納ディレクトリ（複数アプリ対応可）
+│   ├── agent                       # Laravel アプリ1（例：不動産エージェント向け機能など）
+│   ├── languages                   # Laravel アプリ2（例：多言語サポート機能など）
+│   └── public
+│       └── index.php              # Laravel のエントリーポイント（Nginx経由で呼び出される）
+└── README.md                        # プロジェクトの説明や構築手順などのメモ
+
 
 ---
 
@@ -59,12 +64,12 @@ TZ=Asia/Tokyo
 
 2. Docker コンテナをビルド＆起動
 bash
-コードをコピーする
 # 初回ビルド & 起動
 docker-compose up --build -d
 
 # サービスの状態確認
 docker-compose ps
+
 3. 動作確認
 Webサーバー: http://localhost:8080
 → my-app/public/index.php が表示されれば成功です。
@@ -80,8 +85,8 @@ docker compose down
 
 Bash
 docker compose down
-コンテナとネットワークが停止し、削除されます。データベースのデータ (db_data ボリューム) は保持されます。
 
+コンテナとネットワークが停止し、削除されます。データベースのデータ (db_data ボリューム) は保持されます。
 コンテナ、ネットワーク、ボリュームすべてを削除するには:
 
 Bash
@@ -158,3 +163,40 @@ docker-compose down --volumes --remove-orphans
 system prune -a --volumes -f
 docker builder prune -a -f
 docker-compose up --build -d
+
+############################
+Laravel 11のインストール
+############################
+# アプリコンテナに入るコマンド
+docker compose exec php bash
+
+www@d3b77baaf809:/var/www$ ls
+agent  languages  public
+
+# Laravelインストールコマンド
+laravel new agent
+
+   _                               _
+  | |                             | |
+  | |     __ _ _ __ __ ___   _____| |
+  | |    / _` |  __/ _` \ \ / / _ \ |
+  | |___| (_| | | | (_| |\ V /  __/ |
+  |______\__,_|_|  \__,_| \_/ \___|_|
+
+
+ ┌ Which starter kit would you like to install? ────────────────┐
+ │ Livewire                                                     │
+ └──────────────────────────────────────────────────────────────┘
+
+ ┌ Which authentication provider do you prefer? ────────────────┐
+ │ Laravel's built-in authentication                            │
+ └──────────────────────────────────────────────────────────────┘
+
+ ┌ Would you like to use Laravel Volt? ─────────────────────────┐
+ │ ● Yes / ○ No                                                 │
+ └──────────────────────────────────────────────────────────────┘
+
+➜ cd agent
+➜ composer run dev
+
+php artisan migrate
