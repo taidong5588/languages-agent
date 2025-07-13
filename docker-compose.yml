@@ -21,6 +21,8 @@ services:
 
     volumes:
       - ./my-app:/var/www                      # Laravelアプリケーションのコードを共有マウント
+      - ./my-app/agent:/var/www/agent
+      - ./my-app/language:/var/www/language
       - ./docker-config/nginx/default.conf:/etc/nginx/conf.d/default.conf  # Nginx設定ファイルをマウント
       - ./docker-config/errors:/var/log/nginx/errors                       # Nginxエラーログ保存場所をマウント
 
@@ -41,6 +43,8 @@ services:
 
     volumes:
       - ./my-app:/var/www                      # Laravelアプリケーションのコードを共有マウント
+      - ./my-app/agent:/var/www/agent
+      - ./my-app/language:/var/www/language
       - ./docker-config/php/php.ini:/usr/local/etc/php/php.ini            # php.ini 設定ファイルをマウント
       - ./docker-config/errors:/var/log/php-fpm/errors                    # PHPエラーログ保存場所をマウント
 

@@ -199,4 +199,33 @@ laravel new agent
 ➜ cd agent
 ➜ composer run dev
 
+マージ
 php artisan migrate
+
+
+
+🛠 実行手順
+
+# 初回起動
+docker compose up -d
+
+# Laravel 各アプリの初期セットアップ
+docker compose exec php bash
+cd /var/www/agent
+composer install
+php artisan key:generate
+php artisan migrate
+
+🧩 具体的な対応の流れ
+
+docker compose exec php bash
+cd /var/www/agent
+npm install
+npm run dev    # 開発モード
+# または
+npm run build  # 本番ビルド
+
+キャッシュをクリア
+php artisan config:clear
+php artisan cache:clear
+

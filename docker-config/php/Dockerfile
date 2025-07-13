@@ -3,6 +3,7 @@
 # ==========================
 # Composerの公式イメージをベースとして使用
 FROM composer:latest AS composer
+# FROM node:latest AS node
 
 # ==========================
 # Stage 2: PHPアプリケーション環境の構築
@@ -31,6 +32,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zip \
     # APTキャッシュをクリーンアップしてイメージサイズを削減
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/*
+
+# Node.jsのインストール
+# RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+#    && apt-get update \
+#    && apt-get install -y --no-install-recommends nodejs \
+#    && apt-get clean \
+#    && rm -rf /var/lib/apt/lists/* 
+
+# # バージョン確認
+# RUN node -v && npm -v
 
 # ComposerをStage1からコピー
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
