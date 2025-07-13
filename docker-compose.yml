@@ -82,12 +82,13 @@ services:
 
     volumes:
       - ./docker-config/db/data:/var/lib/mysql                # MariaDB データ保存領域（永続化）
+      # - db-data:/var/lib/mysql              # データ永続化用のボリューム
       - ./docker-config/db/conf/my.conf:/etc/mysql/conf.d/my.conf  # MariaDB 設定ファイル
       - ./docker-config/db/sql:/docker-entrypoint-initdb.d    # 初回起動時に実行する SQL
 
     ports:
       # 直接ホストの 3306 をバインドすると競合する可能性があるので注意（他の DB が動いている場合）
-      - "${DB_PORT}:3306" # - "3306:3306"
+      - "${DB_PORT}:3306" # - "3307:3306"
       # - "${DB_PORT:-3307}:3306"  # .env に DB_PORT を定義し、競合しないよう変更（例：3307）
 
     networks:
@@ -136,3 +137,4 @@ volumes:
 networks:
   app-network:
     driver: bridge
+    
