@@ -38,12 +38,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* nodesource_setup.sh
 
 # バージョン確認（オプション。必要ならコメント解除）
-# RUN node -v && npm -v
+RUN node -v && npm -v
 
 # ComposerをStage 1からコピー
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 
-# Composerの環境設定
+# Composerの設定
+# COMPOSER_ALLOW_SUPERUSER: rootユーザーでのComposer実行を許可
+# COMPOSER_HOME: Composerのホームディレクトリ (キャッシュなど)
+# PATH: ComposerのグローバルインストールパスをPATHに追加
 ENV COMPOSER_ALLOW_SUPERUSER=1 \
     COMPOSER_HOME=/composer \
     PATH="${COMPOSER_HOME}/vendor/bin:${PATH}"
