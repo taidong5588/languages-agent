@@ -81,11 +81,6 @@ phpMyAdmin: http://localhost:8081
 Bash
 docker compose down
 
-5. コンテナの停止と削除
-
-Bash
-docker compose down
-
 コンテナとネットワークが停止し、削除されます。データベースのデータ (db_data ボリューム) は保持されます。
 コンテナ、ネットワーク、ボリュームすべてを削除するには:
 
@@ -93,7 +88,7 @@ Bash
 docker compose down -v
 
 
-6. コンテナ内でのコマンド実行
+5. コンテナ内でのコマンド実行
 
 PHPコンテナ内でComposerコマンドなどを実行したい場合:
 
@@ -115,10 +110,10 @@ bash
 cd my-app
 
 # Laravel プロジェクトを作成
-docker exec -it myproject-php composer create-project laravel/laravel .
+docker exec -it languages_project-php composer create-project laravel/laravel .
 
 # Laravel のキーを生成
-docker exec -it myproject-php php artisan key:generate
+docker exec -it languages_project-php php artisan key:generate
 
 # 権限調整（Linux の場合）
 sudo chown -R $USER:$USER my-app
@@ -165,7 +160,7 @@ docker builder prune -a -f
 docker-compose up --build -d
 
 ############################
-Laravel 11のインストール
+Laravel のインストール
 ############################
 # アプリコンテナに入るコマンド
 docker compose exec php bash
@@ -174,8 +169,7 @@ www@d3b77baaf809:/var/www$ ls
 agent  languages  public
 
 # Laravelインストールコマンド
-laravel new agent
-
+composer create-project laravel/laravel agent
    _                               _
   | |                             | |
   | |     __ _ _ __ __ ___   _____| |
