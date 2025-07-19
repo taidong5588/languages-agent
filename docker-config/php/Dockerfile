@@ -12,27 +12,28 @@ FROM php:8.2-fpm
 WORKDIR /var/www
 
 # 必要なシステムパッケージとPHP拡張をインストール
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    curl \
-    zip \
-    unzip \
-    libzip-dev \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    ca-certificates \
-    gnupg \
-    # PHP拡張機能をインストール
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        git \
+        curl \
+        zip \
+        unzip \
+        libzip-dev \
+        libpng-dev \
+        libonig-dev \
+        libxml2-dev \
+        libicu-dev \
+        ca-certificates \
+        gnupg \
     && docker-php-ext-install -j$(nproc) \
-    pdo_mysql \
-    mysqli \
-    zip \
+        intl \
+        pdo_mysql \
+        mysqli \
+        zip \
     # Node.jsのセットアップ https://github.com/nodesource/distributions?files=1
     && curl -fsSL https://deb.nodesource.com/setup_current.x -o nodesource_setup.sh \
     && bash nodesource_setup.sh \
     && apt-get install -y --no-install-recommends nodejs \
-    # 不要パッケージとキャッシュを削除
     && apt-get purge -y curl gnupg \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* nodesource_setup.sh

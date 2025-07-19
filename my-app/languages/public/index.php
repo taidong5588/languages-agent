@@ -77,16 +77,17 @@
 
         <h2>データベース接続確認</h2>
         <?php
-        // 環境変数からデータベース接続情報を取得
-        $db_host = getenv('DB_HOST');
-        $db_name = getenv('DB_DATABASE');
-        $db_user = getenv('DB_USERNAME');
-        $db_pass = getenv('DB_PASSWORD');
+        // エラーレポートを厳格に設定し、例外をスローするようにする
+        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
         try {
             // mysqliでデータベースに接続
-            // エラーレポートを厳格に設定し、例外をスローするようにする
-            mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+            // 環境変数からデータベース接続情報を取得
+            $db_host = getenv('DB_HOST');
+            $db_name = getenv('DB_DATABASE');
+            $db_user = getenv('DB_USERNAME');
+            $db_pass = getenv('DB_PASSWORD');
+
             $conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
 
             // 接続成功メッセージとMariaDBバージョンを表示

@@ -9,7 +9,7 @@
 | サービス     | 内容                           | ポート          |
 |--------------|--------------------------------|------------------|
 | PHP (8.2)    | PHP-FPM によるアプリ実行       | -                |
-| Nginx        | Webサーバ (静的 + PHP対応)     | `http://localhost:8080` |
+| Nginx        | Webサーバ (静的 + PHP対応)     | `http://localhost:8080/agent` |
 | MariaDB      | データベース                    | `3306`           |
 | phpMyAdmin   | DB GUI ツール                   | `http://localhost:8081` |
 
@@ -38,8 +38,8 @@ project-root/
 ├── my-app                            # Laravel アプリ本体のコード格納ディレクトリ（複数アプリ対応可）
 │   ├── agent                       # Laravel アプリ1（例：不動産エージェント向け機能など）
 │   ├── languages                   # Laravel アプリ2（例：多言語サポート機能など）
-│   └── public
-│       └── index.php              # Laravel のエントリーポイント（Nginx経由で呼び出される）
+│           └── public
+│           └── index.php          
 └── README.md                        # プロジェクトの説明や構築手順などのメモ
 
 
@@ -222,4 +222,64 @@ npm run build  # 本番ビルド
 キャッシュをクリア
 php artisan config:clear
 php artisan cache:clear
+php artisan view:clear
+php artisan route:clear
+
+
+設定ファイルを修正後、Nginx 再起動（またはリロード）：
+
+bash
+
+nginx -t  # 設定確認
+nginx -s reload
+# または docker コンテナ内で:
+docker exec -it nginx_container_name nginx -s reload
+
+docker-compose down
+docker-compose up -d --build
+
+Nginx再起動 or reload
+設定変更後は再起動または reload が必要です。
+
+docker-compose restart nginx
+
+
+🚀 反映手順
+bash
+コピーする
+編集する
+# 1. コンテナを再ビルド（Dockerfile/構成変更時）
+docker-compose build
+
+# 2. コンテナ起動（バックグラウンド）
+docker-compose up -d
+
+# 3. 設定ファイル変更後のNginxリロード（ホットリロード）
+docker-compose exec nginx nginx -s reload
+
+# 4. ログ確認（エラー調査用）
+docker-compose logs -f nginx
+docker-compose logs -f php
+
+🔍 確認ポイント
+確認対象	内容
+Laravel /agent	http://localhost:8080/agent
+Laravel /languages	http://localhost:8080/languages
+phpMyAdmin	http://localhost:8081
+.env 読み込み	php サービスの environment が Laravel に反映されているか
+CORS	OPTIONS リクエスト等に 200 が返るか確認
+
+curl -I http://localhost:8080/agent
+
+✅ docker 起動・再起動手順
+修正後に以下を必ず実行してください。
+
+bash
+コピーする
+編集する
+# 再ビルドと再起動
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+
 
